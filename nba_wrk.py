@@ -218,7 +218,8 @@ games_to_show = st.sidebar.selectbox(
     "Recent games to show",
     [5, 10, 15, 20],
     index=2,
-    key="games_to_show_select"
+    key="games_to_show_select",
+    label_visibility="collapsed"
 )
 
 if st.sidebar.button("🔄 Refresh Data"):
@@ -500,4 +501,5 @@ with st.expander("📊 Recent Game Log + Averages", expanded=False):
 
 # ── Footer ──────────────────────────────────────────────────────────────────────
 st.markdown("<p style='text-align:center; color:#88f0ff; padding:3rem 1rem;'>ICE PROP LAB • SYSTEM ACTIVE • 2025-26</p>", unsafe_allow_html=True)
+
 
