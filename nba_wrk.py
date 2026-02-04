@@ -1,5 +1,5 @@
 # nba_wrk.py – ICE PROP LAB • Single Player + Persistent Opponent
-# Mobile-friendly version
+# Mobile-friendly version – with original hit-rate layout restored
 
 import streamlit as st
 from nba_api.stats.static import players
@@ -12,23 +12,20 @@ from datetime import datetime
 st.set_page_config(
     page_title="ICE PROP LAB",
     layout="wide",
-    initial_sidebar_state="collapsed"          # Changed: better for mobile
+    initial_sidebar_state="collapsed"          # Better for mobile
 )
 
-# ── Improved mobile + touch-friendly styling ────────────────────────────────────
+# ── Mobile + touch-friendly styling ─────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Main background */
     .main {background: linear-gradient(135deg, #0a1a2f 0%, #001122 100%);}
 
-    /* Headers */
     h1, h2, h3 {
         font-family: 'Exo 2', sans-serif;
         color: #00e0ff !important;
         text-shadow: 0 0 20px #00e0ff, 0 0 40px rgba(0,224,255,0.5);
     }
 
-    /* Buttons - bigger touch targets */
     .stButton > button {
         min-height: 48px !important;
         font-size: 16px !important;
@@ -39,7 +36,6 @@ st.markdown("""
         box-shadow: 0 0 25px rgba(0,224,255,0.6);
     }
 
-    /* Select boxes */
     div[data-baseweb="select"] {
         font-size: 16px !important;
         background: rgba(0,224,255,0.08) !important;
@@ -47,7 +43,6 @@ st.markdown("""
         color: #00e0ff !important;
     }
 
-    /* Tables */
     table {
         width: 100%;
         border-collapse: collapse;
@@ -74,7 +69,7 @@ st.markdown("""
         border-bottom: 1px solid rgba(0,224,255,0.12);
     }
 
-    /* Responsive adjustments */
+    /* Responsive tweaks */
     @media (max-width: 768px) {
         .main .block-container {
             padding-top: 1rem !important;
@@ -83,22 +78,20 @@ st.markdown("""
             padding-right: 0.8rem !important;
         }
         h1, h2, h3 { font-size: 1.5rem !important; }
-        .stPlotlyChart { height: 260px !important; }  /* smaller charts on phone */
+        .stPlotlyChart { height: 260px !important; }
         section[data-testid="stSidebar"] {
             min-width: 280px !important;
         }
-    }
-
-    /* Expander styling */
-    .stExpander {
-        background: rgba(10,30,60,0.7) !important;
-        border: 1px solid #00aaff !important;
-        border-radius: 10px !important;
+        /* Make hit-rate cards stack better on very small screens */
+        div[data-testid="stHorizontalBlock"] > div {
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Initialize session state for board ─────────────────────────────────────────
+# ── Session state ───────────────────────────────────────────────────────────────
 if 'my_board' not in st.session_state:
     st.session_state.my_board = []
 
@@ -220,7 +213,7 @@ with st.sidebar.expander(f"📋 My Board ({len(st.session_state.my_board)})", ex
             st.rerun()
 
 # Display Settings
-#st.sidebar.markdown("### Display Settings")
+st.sidebar.markdown("### Display Settings")
 games_to_show = st.sidebar.selectbox(
     "Recent games to show",
     [5, 10, 15, 20],
@@ -261,8 +254,8 @@ df["PRA"] = df["PTS"] + df["REB"] + df["AST"]
 stats = ['PTS', 'REB', 'Pts+Reb', 'AST', 'STL', 'BLK', 'TOV', 'FG3M',
          'Pts+Ast', 'Ast+Reb', 'Stl+Blk', 'PRA']
 
-# ── Prop line selectors (3 per row) ─────────────────────────────────────────────
-#st.markdown("##### Prop Lines")
+# ── Prop line selectors (3 per row – mobile friendly) ───────────────────────────
+st.markdown("##### Prop Lines")
 
 lines = {}
 cols_per_row = 3
@@ -281,7 +274,7 @@ for i in range(0, len(stats), cols_per_row):
             if val is not None:
                 lines[stat] = val
 
-# ── Hit Rate Summary ────────────────────────────────────────────────────────────
+# ── Hit Rate Summary – original layout restored ────────────────────────────────
 if lines:
     pdata = df.sort_values("GAME_DATE_DT", ascending=False)
 
@@ -292,7 +285,7 @@ if lines:
         "+150", "+155", "+160", "+165", "+200"
     ]
 
-    #st.markdown("##### Hit Rate Summary")
+    st.markdown("##### Hit Rate Summary")
 
     for stat, line in lines.items():
         over_list = []
@@ -323,54 +316,60 @@ if lines:
         else:
             avg_text = " — —"
 
-        with st.expander(f"{stat} {line}", expanded=True):
+        content = f"<center><strong>{stat} {line}</strong><strong> {hit_str}{avg_text}</strong></center>"
+
+        col_content, col_odds, col_pin = st.columns([5.5, 3.5, 1])
+
+        with col_content:
             st.markdown(
-                f"<center><strong>{hit_str}</strong><br>{avg_text}</center>",
+                f"<div style='background:rgba(10,30,60,0.7); padding:8px; border-radius:10px; border:1px solid #00aaff;'>{content}</div>",
                 unsafe_allow_html=True
             )
 
-            col_odds, col_pin = st.columns([4, 1])
-            with col_odds:
-                selected_odds = st.selectbox(
-                    "Odds",
-                    options=odds_options,
-                    index=0,
-                    format_func=lambda x: x if x else "— no odds —",
-                    key=f"odds_select_{selected_player}_{stat}_{line}",
-                    label_visibility="collapsed"
+        with col_odds:
+            selected_odds = st.selectbox(
+                "Odds",
+                options=odds_options,
+                index=0,
+                format_func=lambda x: x if x else "— no odds —",
+                key=f"odds_select_{selected_player}_{stat}_{line}",
+                label_visibility="collapsed"
+            )
+
+        with col_pin:
+            if st.button("📌", key=f"save_{selected_player}_{stat}_{line}_{selected_odds}", help="Pin to My Board"):
+                entry = {
+                    "player": selected_player,
+                    "opponent": next_opp,
+                    "stat": stat,
+                    "line": f"{line:.1f}",
+                    "odds": selected_odds if selected_odds else "",
+                    "hitrate_str": f"{hit_str}{avg_text}",
+                    "timestamp": datetime.now().strftime("%m/%d %H:%M")
+                }
+
+                exists = any(
+                    e["player"] == entry["player"] and
+                    e["stat"] == entry["stat"] and
+                    e["line"] == entry["line"] and
+                    e.get("odds", "") == entry["odds"]
+                    for e in st.session_state.my_board
                 )
-            with col_pin:
-                if st.button("📌", key=f"save_{selected_player}_{stat}_{line}_{selected_odds}", help="Pin to My Board"):
-                    entry = {
-                        "player": selected_player,
-                        "opponent": next_opp,
-                        "stat": stat,
-                        "line": f"{line:.1f}",
-                        "odds": selected_odds if selected_odds else "",
-                        "hitrate_str": f"{hit_str}{avg_text}",
-                        "timestamp": datetime.now().strftime("%m/%d %H:%M")
-                    }
-                    exists = any(
-                        e["player"] == entry["player"] and
-                        e["stat"] == entry["stat"] and
-                        e["line"] == entry["line"] and
-                        e.get("odds", "") == entry["odds"]
-                        for e in st.session_state.my_board
-                    )
-                    if not exists:
-                        st.session_state.my_board.append(entry)
-                        odds_part = f"   {entry['odds']}" if entry['odds'] else ""
-                        st.toast(f"Pinned {stat} {entry['line']}{odds_part}", icon="📌")
-                    else:
-                        st.toast("Already pinned", icon="ℹ️")
+
+                if not exists:
+                    st.session_state.my_board.append(entry)
+                    odds_part = f"   {entry['odds']}" if entry['odds'] else ""
+                    st.toast(f"Pinned {stat} {entry['line']}{odds_part}", icon="📌")
+                else:
+                    st.toast("Already pinned", icon="ℹ️")
 else:
     st.info("Select prop lines to see hit rates.")
 
-# ── Recent Performance Charts ───────────────────────────────────────────────────
+# ── Recent Performance ──────────────────────────────────────────────────────────
 recent = df.head(games_to_show)
 
 if lines:
-    chart_cols = st.columns(min(2, len(lines)))  # 2 per row on larger screens, stacks on mobile
+    chart_cols = st.columns(min(2, len(lines)))  # 2 per row → stacks on mobile
 
     for i, (stat, line) in enumerate(lines.items()):
         with chart_cols[i % len(chart_cols)]:
@@ -479,7 +478,7 @@ else:
         use_container_width=True
     )
 
-# ── Full Recent Game Log ────────────────────────────────────────────────────────
+# ── Recent Game Log + Averages ──────────────────────────────────────────────────
 with st.expander("📊 Recent Game Log + Averages", expanded=False):
     display_cols = ['GAME_DATE', 'MATCHUP', 'MIN'] + stats
     log = recent[display_cols].copy()
@@ -501,4 +500,3 @@ with st.expander("📊 Recent Game Log + Averages", expanded=False):
 
 # ── Footer ──────────────────────────────────────────────────────────────────────
 st.markdown("<p style='text-align:center; color:#88f0ff; padding:3rem 1rem;'>ICE PROP LAB • SYSTEM ACTIVE • 2025-26</p>", unsafe_allow_html=True)
-
