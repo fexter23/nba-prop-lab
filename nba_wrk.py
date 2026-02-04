@@ -213,7 +213,7 @@ with st.sidebar.expander(f"📋 My Board ({len(st.session_state.my_board)})", ex
             st.rerun()
 
 # Display Settings
-st.sidebar.markdown("### Display Settings")
+#st.sidebar.markdown("### Display Settings")
 games_to_show = st.sidebar.selectbox(
     "Recent games to show",
     [5, 10, 15, 20],
@@ -255,7 +255,7 @@ stats = ['PTS', 'REB', 'Pts+Reb', 'AST', 'STL', 'BLK', 'TOV', 'FG3M',
          'Pts+Ast', 'Ast+Reb', 'Stl+Blk', 'PRA']
 
 # ── Prop line selectors (3 per row – mobile friendly) ───────────────────────────
-st.markdown("##### Prop Lines")
+#st.markdown("##### Prop Lines")
 
 lines = {}
 cols_per_row = 3
@@ -285,7 +285,7 @@ if lines:
         "+150", "+155", "+160", "+165", "+200"
     ]
 
-    st.markdown("##### Hit Rate Summary")
+    #st.markdown("##### Hit Rate Summary")
 
     for stat, line in lines.items():
         over_list = []
@@ -500,3 +500,4 @@ with st.expander("📊 Recent Game Log + Averages", expanded=False):
 
 # ── Footer ──────────────────────────────────────────────────────────────────────
 st.markdown("<p style='text-align:center; color:#88f0ff; padding:3rem 1rem;'>ICE PROP LAB • SYSTEM ACTIVE • 2025-26</p>", unsafe_allow_html=True)
+
