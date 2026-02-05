@@ -1,5 +1,4 @@
 # nba_wrk.py – ICE PROP LAB • Single Player + Persistent Opponent
-# Mobile-friendly version – with original hit-rate layout restored
 
 import streamlit as st
 from nba_api.stats.static import players
@@ -9,89 +8,9 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
 
-st.set_page_config(
-    page_title="ICE PROP LAB",
-    layout="wide",
-    initial_sidebar_state="collapsed"          # Better for mobile
-)
+st.set_page_config(page_title="ICE PROP LAB", layout="wide", initial_sidebar_state="expanded")
 
-# ── Mobile + touch-friendly styling ─────────────────────────────────────────────
-st.markdown("""
-<style>
-    .main {background: linear-gradient(135deg, #0a1a2f 0%, #001122 100%);}
-
-    h1, h2, h3 {
-        font-family: 'Exo 2', sans-serif;
-        color: #00e0ff !important;
-        text-shadow: 0 0 20px #00e0ff, 0 0 40px rgba(0,224,255,0.5);
-    }
-
-    .stButton > button {
-        min-height: 48px !important;
-        font-size: 16px !important;
-        background: linear-gradient(45deg, #003366, #00aaff) !important;
-        color: white !important;
-        border: 2px solid #00e0ff !important;
-        border-radius: 12px;
-        box-shadow: 0 0 25px rgba(0,224,255,0.6);
-    }
-
-    div[data-baseweb="select"] {
-        font-size: 16px !important;
-        background: rgba(0,224,255,0.08) !important;
-        border: 1px solid #00aaff !important;
-        color: #00e0ff !important;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        font-family: 'Exo 2', sans-serif;
-        color: #00e0ff;
-        background: rgba(10,30,60,0.7);
-        border: 1px solid #00aaff;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 0 20px rgba(0,170,255,0.3);
-    }
-    th {
-        background: linear-gradient(90deg, #003366, #001122);
-        color: #00ffff;
-        padding: 10px;
-        text-align: center;
-        font-weight: 700;
-        border-bottom: 2px solid #00e0ff;
-    }
-    td {
-        padding: 12px;
-        text-align: left;
-        vertical-align: top;
-        border-bottom: 1px solid rgba(0,224,255,0.12);
-    }
-
-    /* Responsive tweaks */
-    @media (max-width: 768px) {
-        .main .block-container {
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-        }
-        h1, h2, h3 { font-size: 1.5rem !important; }
-        .stPlotlyChart { height: 260px !important; }
-        section[data-testid="stSidebar"] {
-            min-width: 280px !important;
-        }
-        /* Make hit-rate cards stack better on very small screens */
-        div[data-testid="stHorizontalBlock"] > div {
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ── Session state ───────────────────────────────────────────────────────────────
+# ── Initialize session state for board ─────────────────────────────────────────
 if 'my_board' not in st.session_state:
     st.session_state.my_board = []
 
@@ -106,6 +25,30 @@ def get_current_season():
 CURRENT_SEASON = get_current_season()
 current_year = int(CURRENT_SEASON.split('-')[0])
 PREVIOUS_SEASON = f"{current_year - 1}-{str(current_year)[-2:]}"
+
+# ── Styling ─────────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+    .main {background: linear-gradient(135deg, #0a1a2f 0%, #001122 100%);}
+    h1, h2, h3 {font-family: 'Exo 2', sans-serif; color: #00e0ff !important;
+                text-shadow: 0 0 20px #00e0ff, 0 0 40px rgba(0,224,255,0.5);}
+    .stButton>button {background: linear-gradient(45deg, #003366, #00aaff) !important;
+                      color: white !important; border: 2px solid #00e0ff !important;
+                      font-weight: 700; border-radius: 12px; box-shadow: 0 0 25px rgba(0,224,255,0.6);}
+    div[data-baseweb="select"] > div {background: rgba(0,224,255,0.08) !important;
+                                      border: 1px solid #00aaff !important; color: #00e0ff !important;}
+    table {width: 100%; border-collapse: collapse; 
+           font-family: 'Exo 2', sans-serif; color: #00e0ff;
+           background: rgba(10,30,60,0.7); border: 1px solid #00aaff;
+           border-radius: 10px; overflow: hidden;
+           box-shadow: 0 0 20px rgba(0,170,255,0.3);}
+    th {background: linear-gradient(90deg, #003366, #001122);
+        color: #00ffff; padding: 10px; text-align: center;
+        font-weight: 700; border-bottom: 2px solid #00e0ff;}
+    td {padding: 12px; text-align: left; vertical-align: top;
+        border-bottom: 1px solid rgba(0,224,255,0.12);}
+</style>
+""", unsafe_allow_html=True)
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────
 def dropdown_values():
@@ -157,6 +100,7 @@ if 'next_opponent' not in st.session_state:
 
 # ── Sidebar ─────────────────────────────────────────────────────────────────────
 
+# Player & Opponent selectors side-by-side
 sidebar_cols = st.sidebar.columns([3, 2])
 
 with sidebar_cols[0]:
@@ -176,7 +120,7 @@ with sidebar_cols[1]:
         label_visibility="collapsed"
     )
 
-# Auto-set opponent
+# Auto-set opponent for famous players (optional)
 if selected_player != "— Choose player —" and st.session_state.next_opponent == "BOS":
     if "James" in selected_player:
         st.session_state.next_opponent = "LAL"
@@ -188,7 +132,43 @@ if selected_player != "— Choose player —" and st.session_state.next_opponent
 if next_opp != st.session_state.next_opponent:
     st.session_state.next_opponent = next_opp
 
-# My Board
+# Stat selector
+available_stats = [
+    'PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV',
+    'FGM', 'FGA', 'FG3M', 'FG3A', '2PM', '2PA',
+    'Pts+Reb', 'Pts+Ast', 'Ast+Reb', 'Stl+Blk', 'PRA'
+]
+
+selected_stat = st.sidebar.selectbox(
+    "Choose stat",
+    options=["— Select a stat —"] + available_stats,
+    index=0,
+    key="selected_stat_dropdown",
+    label_visibility="collapsed",
+    help="Select one stat to view prop lines, hit rates and recent performance"
+)
+
+# Prop line selector
+lines = {}
+
+if selected_stat and selected_stat != "— Select a stat —":
+    st.sidebar.markdown(f"**{selected_stat} line**")
+    
+    val = st.sidebar.selectbox(
+        f"{selected_stat} line",
+        dropdown_values(),
+        format_func=lambda x: "—" if x is None else f"{x}",
+        key=f"line_{selected_stat}_sidebar",
+        label_visibility="collapsed",
+        help=f"Set the over/under line for {selected_stat}"
+    )
+    
+    if val is not None:
+        lines[selected_stat] = val
+else:
+    st.sidebar.info("Select a stat to set the prop line", icon="ℹ️")
+
+# ── My Board (moved up) ─────────────────────────────────────────────────────────
 with st.sidebar.expander(f"📋 My Board ({len(st.session_state.my_board)})", expanded=len(st.session_state.my_board) > 0):
     if not st.session_state.my_board:
         st.caption("No props saved yet. Pin interesting lines with 📌")
@@ -212,8 +192,7 @@ with st.sidebar.expander(f"📋 My Board ({len(st.session_state.my_board)})", ex
             st.session_state.my_board = []
             st.rerun()
 
-# Display Settings
-#st.sidebar.markdown("### Display Settings")
+# ── Display Settings ────────────────────────────────────────────────────────────
 games_to_show = st.sidebar.selectbox(
     "Recent games to show",
     [5, 10, 15, 20],
@@ -222,11 +201,14 @@ games_to_show = st.sidebar.selectbox(
     label_visibility="collapsed"
 )
 
+# ── Refresh button (moved to last position) ─────────────────────────────────────
 if st.sidebar.button("🔄 Refresh Data"):
     st.cache_data.clear()
     st.rerun()
 
-# ── Main content ────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────────
+# Main content starts here
+# ────────────────────────────────────────────────────────────────────────────────
 
 if selected_player == "— Choose player —":
     st.info("Select a player to begin.")
@@ -250,32 +232,11 @@ df["Pts+Ast"] = df["PTS"] + df["AST"]
 df["Pts+Reb"] = df["PTS"] + df["REB"]
 df["Ast+Reb"] = df["AST"] + df["REB"]
 df["Stl+Blk"] = df["STL"] + df["BLK"]
+df["2PM"] = df["FGM"] - df["FG3M"]
+df["2PA"] = df["FGA"] - df["FG3A"]
 df["PRA"] = df["PTS"] + df["REB"] + df["AST"]
 
-stats = ['PTS', 'REB', 'Pts+Reb', 'AST', 'STL', 'BLK', 'TOV', 'FG3M',
-         'Pts+Ast', 'Ast+Reb', 'Stl+Blk', 'PRA']
-
-# ── Prop line selectors (3 per row – mobile friendly) ───────────────────────────
-#st.markdown("##### Prop Lines")
-
-lines = {}
-cols_per_row = 3
-for i in range(0, len(stats), cols_per_row):
-    chunk = stats[i:i + cols_per_row]
-    cols = st.columns(len(chunk))
-    for col, stat in zip(cols, chunk):
-        with col:
-            val = st.selectbox(
-                stat,
-                dropdown_values(),
-                format_func=lambda x: "—" if x is None else f"{x}",
-                key=f"line_{stat}",
-                label_visibility="visible"
-            )
-            if val is not None:
-                lines[stat] = val
-
-# ── Hit Rate Summary – original layout restored ────────────────────────────────
+# ── 1. HIT RATE SUMMARY ─────────────────────────────────────────────────────────
 if lines:
     pdata = df.sort_values("GAME_DATE_DT", ascending=False)
 
@@ -285,8 +246,6 @@ if lines:
         "+100", "+105", "+110", "+115", "+120", "+125", "+130", "+135", "+140", "+145",
         "+150", "+155", "+160", "+165", "+200"
     ]
-
-    #st.markdown("##### Hit Rate Summary")
 
     for stat, line in lines.items():
         over_list = []
@@ -323,28 +282,33 @@ if lines:
 
         with col_content:
             st.markdown(
-                f"<div style='background:rgba(10,30,60,0.7); padding:8px; border-radius:10px; border:1px solid #00aaff;'>{content}</div>",
+                f"<div style='background:rgba(10,30,60,0.7); padding:6px; border-radius:10px; border:1px solid #00aaff;'>{content}</div>",
                 unsafe_allow_html=True
             )
 
         with col_odds:
+            odds_key = f"odds_{selected_player}_{stat}_{line}"
             selected_odds = st.selectbox(
                 "Odds",
                 options=odds_options,
                 index=0,
                 format_func=lambda x: x if x else "— no odds —",
-                key=f"odds_select_{selected_player}_{stat}_{line}",
+                key=odds_key,
                 label_visibility="collapsed"
             )
 
         with col_pin:
-            if st.button("📌", key=f"save_{selected_player}_{stat}_{line}_{selected_odds}", help="Pin to My Board"):
+            pin_key = f"pin_{selected_player}_{stat}_{line}"
+
+            if st.button("📌", key=pin_key, help="Pin to My Board"):
+                current_odds = st.session_state.get(odds_key, "")
+
                 entry = {
                     "player": selected_player,
                     "opponent": next_opp,
                     "stat": stat,
                     "line": f"{line:.1f}",
-                    "odds": selected_odds if selected_odds else "",
+                    "odds": current_odds if current_odds else "",
                     "hitrate_str": f"{hit_str}{avg_text}",
                     "timestamp": datetime.now().strftime("%m/%d %H:%M")
                 }
@@ -363,53 +327,54 @@ if lines:
                     st.toast(f"Pinned {stat} {entry['line']}{odds_part}", icon="📌")
                 else:
                     st.toast("Already pinned", icon="ℹ️")
-else:
-    st.info("Select prop lines to see hit rates.")
 
-# ── Recent Performance ──────────────────────────────────────────────────────────
+                st.rerun()
+
+# ── 2. RECENT PERFORMANCE ───────────────────────────────────────────────────────
 recent = df.head(games_to_show)
 
 if lines:
-    chart_cols = st.columns(min(2, len(lines)))  # 2 per row → stacks on mobile
+    for stat, line in lines.items():
+        fig = go.Figure()
+        colors = ["#00ff88" if v > line else "#ff4444" for v in recent[stat]]
+        
+        fig.add_trace(go.Bar(
+            x=recent["GAME_DATE"], 
+            y=recent[stat],
+            marker_color=colors,
+            text=recent[stat].round(1),
+            textposition="inside",
+            textfont=dict(color="#000000"),
+            hovertemplate="Date: %{x}<br>Stat: %{y}<br>Line: " + str(line) + "<extra></extra>"
+        ))
+        fig.add_hline(y=line, line_color="#00ffff", line_width=3, line_dash="dash")
+        
+        fig.update_layout(
+            height=320, 
+            showlegend=False,
+            plot_bgcolor="rgba(0,0,0,0)", 
+            paper_bgcolor="rgba(0,0,0,0)",
+            font_color="#00e0ff",
+            margin=dict(t=20, b=40, l=30, r=30),
+            yaxis_title=stat
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-    for i, (stat, line) in enumerate(lines.items()):
-        with chart_cols[i % len(chart_cols)]:
-            fig = go.Figure()
-            colors = ["#00ff88" if v > line else "#ff4444" for v in recent[stat]]
-
-            fig.add_trace(go.Bar(
-                x=recent["GAME_DATE"],
-                y=recent[stat],
-                marker_color=colors,
-                text=recent[stat].round(1),
-                textposition="inside",
-                textfont=dict(color="#000000"),
-                hovertemplate="Date: %{x}<br>Stat: %{y}<br>Line: " + str(line) + "<extra></extra>"
-            ))
-            fig.add_hline(y=line, line_color="#00ffff", line_width=3, line_dash="dash")
-
-            fig.update_layout(
-                autosize=True,
-                height=300,
-                showlegend=False,
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font_color="#00e0ff",
-                margin=dict(t=20, b=40, l=30, r=30),
-                yaxis_title=stat
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-# ── Recent Minutes Played ───────────────────────────────────────────────────────
+# ── 3. RECENT MINUTES PLAYED ────────────────────────────────────────────────────
 fig_min = go.Figure()
 
 colors = []
 for m in recent['MIN']:
-    if m >= 35: colors.append("#00ff88")
-    elif m >= 30: colors.append("#88ff88")
-    elif m >= 25: colors.append("#ffff88")
-    elif m >= 20: colors.append("#ffcc88")
-    else: colors.append("#ff8888")
+    if m >= 35:
+        colors.append("#00ff88")
+    elif m >= 30:
+        colors.append("#88ff88")
+    elif m >= 25:
+        colors.append("#ffff88")
+    elif m >= 20:
+        colors.append("#ffcc88")
+    else:
+        colors.append("#ff8888")
 
 fig_min.add_trace(go.Bar(
     x=recent["GAME_DATE"],
@@ -432,8 +397,7 @@ fig_min.add_hline(
 )
 
 fig_min.update_layout(
-    autosize=True,
-    height=320,
+    height=340,
     showlegend=False,
     plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="rgba(0,0,0,0)",
@@ -445,7 +409,7 @@ fig_min.update_layout(
 
 st.plotly_chart(fig_min, use_container_width=True)
 
-# ── Game Log vs Opponent ────────────────────────────────────────────────────────
+# ── 4. GAME LOG vs OPPONENT ─────────────────────────────────────────────────────
 opp_mask = (
     df['MATCHUP'].str.contains(f"vs. {next_opp}", case=False) |
     df['MATCHUP'].str.contains(f"@ {next_opp}", case=False) |
@@ -457,7 +421,8 @@ vs_opp = df[opp_mask].sort_values("GAME_DATE_DT", ascending=False)
 if vs_opp.empty:
     st.caption(f"No games found vs {next_opp}")
 else:
-    avg = vs_opp[stats].mean().round(1)
+    display_cols = ['GAME_DATE', 'MATCHUP', 'MIN'] + list(lines.keys())
+    avg = vs_opp[list(lines.keys())].mean().round(1) if lines else pd.Series()
     avg_row = {
         "GAME_DATE": "",
         "MATCHUP": "",
@@ -466,7 +431,7 @@ else:
     }
     avg_row.update(avg.to_dict())
 
-    df_display = pd.concat([vs_opp[['GAME_DATE','MATCHUP','MIN'] + stats], pd.DataFrame([avg_row])], ignore_index=True)
+    df_display = pd.concat([vs_opp[['GAME_DATE','MATCHUP','MIN'] + list(lines.keys())], pd.DataFrame([avg_row])], ignore_index=True)
 
     def highlight_avg(row):
         if row["GAME_DATE"] == "":
@@ -474,17 +439,17 @@ else:
         return [''] * len(row)
 
     st.dataframe(
-        df_display.style.format({c: "{:.1f}" for c in ['MIN'] + stats})
+        df_display.style.format({c: "{:.1f}" for c in ['MIN'] + list(lines.keys())})
                       .apply(highlight_avg, axis=1),
         use_container_width=True
     )
 
-# ── Recent Game Log + Averages ──────────────────────────────────────────────────
+# ── 5. Recent game log + averages ───────────────────────────────────────────────
 with st.expander("📊 Recent Game Log + Averages", expanded=False):
-    display_cols = ['GAME_DATE', 'MATCHUP', 'MIN'] + stats
+    display_cols = ['GAME_DATE', 'MATCHUP', 'MIN'] + list(lines.keys())
     log = recent[display_cols].copy()
 
-    avg = recent[stats].mean().round(1)
+    avg = recent[list(lines.keys())].mean().round(1) if lines else pd.Series()
     avg_row = {
         "GAME_DATE": "",
         "MATCHUP": "",
@@ -495,11 +460,9 @@ with st.expander("📊 Recent Game Log + Averages", expanded=False):
     final = pd.concat([log, pd.DataFrame([avg_row])], ignore_index=True)
 
     st.dataframe(
-        final.style.format({c: "{:.1f}" for c in ['MIN'] + stats}),
+        final.style.format({c: "{:.1f}" for c in ['MIN'] + list(lines.keys())}),
         use_container_width=True
     )
 
 # ── Footer ──────────────────────────────────────────────────────────────────────
-st.markdown("<p style='text-align:center; color:#88f0ff; padding:3rem 1rem;'>ICE PROP LAB • SYSTEM ACTIVE • 2025-26</p>", unsafe_allow_html=True)
-
-
+st.markdown("<p style='text-align:center; color:#88f0ff; padding:4rem;'>ICE PROP LAB • SYSTEM ACTIVE • 2025-26</p>", unsafe_allow_html=True)
